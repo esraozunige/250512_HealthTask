@@ -2,11 +2,11 @@
 
 Bu proje takibi, yapılması gereken işleri, önceliklerini ve güncel durumlarını listeler.
 
-> 📅 **Son Güncelleme:** 13 Mayıs - 00:25 CET
+> 📅 **Son Güncelleme:** 13 Mayıs - 23:54 UTC
 
 ---
 
-## ✅ DONE (Tamamlananlar)
+## ✅ DONE 
 
 | Görev | Zorluk |
 |-------|--------|
