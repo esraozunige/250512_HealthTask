@@ -38,7 +38,7 @@ const PatientRegistration = () => {
       return;
     }
     // 1. Register with Supabase Auth
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { user, error: signUpError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
     });
@@ -46,16 +46,11 @@ const PatientRegistration = () => {
       Alert.alert('Error', signUpError.message);
       return;
     }
-    // 2. Immediately sign in the user
-    const { user, error: signInError } = await supabase.auth.signIn({
-      email: formData.email,
-      password: formData.password,
-    });
-    if (signInError || !user) {
-      Alert.alert('Error', signInError?.message || 'Could not sign in. Please check your email for confirmation or try logging in.');
+    if (!user) {
+      Alert.alert('Success', 'Check your email to confirm your account before continuing.');
       return;
     }
-    // 3. Insert into users table (if not already present)
+    // 2. Insert into users table
     const { error: insertError } = await supabase.from('users').insert([
       {
         id: user.id,
@@ -71,11 +66,44 @@ const PatientRegistration = () => {
       Alert.alert('Error', insertError.message);
       return;
     }
-    // 4. Continue to PatientInvitePlayers
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'PatientInvitePlayers', params: { group_id } }],
-    });
+    // 3. Add patient to group as member
+    let finalGroupId = group_id;
+    if (!finalGroupId) {
+      // Fallback: create a group if not present (should not happen if flow is correct)
+      const { data: group, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          patient_id: user.id,
+          doctor_id: null,
+        })
+        .select()
+        .single();
+      if (groupError) {
+        Alert.alert('Error', 'Could not create group.');
+        return;
+      }
+      finalGroupId = group.id;
+    } else {
+      // Update group with patient_id if not set
+      await supabase
+        .from('groups')
+        .update({ patient_id: user.id })
+        .eq('id', finalGroupId);
+    }
+
+    // Insert patient as group member
+    await supabase.from('group_members').insert([
+      {
+        group_id: finalGroupId,
+        user_id: user.id,
+        role: 'patient',
+      },
+    ]);
+
+    // Optionally, update invitation status to 'accepted' here
+
+    // 4. Navigate to PatientInvitePlayers, passing group_id
+    navigation.navigate('PatientInvitePlayers', { group_id: finalGroupId || '' });
   };
 
   return (
@@ -155,8 +183,8 @@ const PatientRegistration = () => {
                 Your doctor has invited you to join Secret Reveal. After registration, you'll need to:
               </Text>
               <View style={styles.bulletPoints}>
-                <Text style={styles.bulletPoint}>• Invite at least 2 players to join your group</Text>
-                <Text style={styles.bulletPoint}>• Add at least 10 personal secrets</Text>
+                <Text style={styles.bulletPoint}>• Invite at least 1 player to join your group</Text>
+                <Text style={styles.bulletPoint}>• Add at least 2 personal secrets</Text>
                 <Text style={styles.bulletPoint}>• Create your own health tasks</Text>
               </View>
             </View>

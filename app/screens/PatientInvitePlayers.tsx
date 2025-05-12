@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -16,6 +17,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { supabase } from '../../lib/supabase';
 import { createInvitation, insertPendingPlayerUser } from '../lib/invitations';
+import * as Clipboard from 'expo-clipboard';
+import { Alert as RNAlert } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PatientInvitePlayers'>;
 type PatientInvitePlayersRouteProp = RouteProp<RootStackParamList, 'PatientInvitePlayers'>;
@@ -32,7 +35,6 @@ const PatientInvitePlayers = () => {
   const { group_id } = route.params;
   const [email, setEmail] = useState('');
   const [invitedPlayers, setInvitedPlayers] = useState<InvitedPlayer[]>([]);
-  const [invitationLink] = useState('https://secretreveal.app/join/AB...');
 
   const isValidEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -40,17 +42,17 @@ const PatientInvitePlayers = () => {
 
   const handleAddPlayer = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+      showAlert('Error', 'Please enter an email address');
       return;
     }
 
     if (!isValidEmail(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert('Error', 'Please enter a valid email address');
       return;
     }
 
     if (invitedPlayers.some(player => player.email === email)) {
-      Alert.alert('Error', 'This email has already been invited');
+      showAlert('Error', 'This email has already been invited');
       return;
     }
 
@@ -61,12 +63,12 @@ const PatientInvitePlayers = () => {
     const session = supabase.auth.session();
     console.log('Session:', session);
     if (!session?.user) {
-      Alert.alert('Error', 'User not authenticated. Please sign in again.');
+      showAlert('Error', 'User not authenticated. Please sign in again.');
       return;
     }
 
     if (!group_id) {
-      Alert.alert('Error', 'Group not found.');
+      showAlert('Error', 'Group not found.');
       return;
     }
 
@@ -89,7 +91,7 @@ const PatientInvitePlayers = () => {
       setEmail('');
     } catch (error) {
       console.error('Error creating invitation:', error);
-      Alert.alert('Error', 'Could not create invitation.');
+      showAlert('Error', 'Could not create invitation.');
     }
   };
 
@@ -115,6 +117,28 @@ const PatientInvitePlayers = () => {
     );
     const mailto = `mailto:${player.email}?subject=${subject}&body=${body}`;
     Linking.openURL(mailto);
+  };
+
+  const handleCopyCode = async (code: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        await window.navigator.clipboard.writeText(code);
+        window.alert('Invitation code copied to clipboard');
+      } catch (e) {
+        window.alert('Failed to copy code');
+      }
+    } else {
+      await Clipboard.setStringAsync(code);
+      RNAlert.alert('Copied', 'Invitation code copied to clipboard');
+    }
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      RNAlert.alert(title, message);
+    }
   };
 
   return (
@@ -188,7 +212,12 @@ const PatientInvitePlayers = () => {
                       <View>
                       <Text style={styles.playerEmail}>{player.email}</Text>
                         {player.code && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Text style={styles.invitationCode}>Invitation Code: {player.code}</Text>
+                            <TouchableOpacity onPress={() => handleCopyCode(player.code)}>
+                              <Ionicons name="copy-outline" size={18} color="#4A6FFF" />
+                            </TouchableOpacity>
+                          </View>
                         )}
                       </View>
                     </View>
@@ -210,26 +239,6 @@ const PatientInvitePlayers = () => {
                 ))}
               </View>
             )}
-          </View>
-
-          <View style={styles.shareSection}>
-            <Text style={styles.sectionTitle}>Or Share Invitation Link</Text>
-            <View style={styles.linkContainer}>
-              <Text style={styles.link} numberOfLines={1}>{invitationLink}</Text>
-              <TouchableOpacity style={styles.copyButton}>
-                <Ionicons name="copy-outline" size={20} color="#E86D6D" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.shareButtons}>
-              <TouchableOpacity style={styles.messageButton}>
-                <Ionicons name="chatbubble-outline" size={20} color="#E86D6D" />
-                <Text style={styles.shareButtonText}>Message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.emailButton}>
-                <Ionicons name="mail-outline" size={20} color="#E86D6D" />
-                <Text style={styles.shareButtonText}>Email</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -397,54 +406,6 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 4,
-  },
-  shareSection: {
-    marginBottom: 24,
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  link: {
-    flex: 1,
-    fontSize: 14,
-    color: '#666',
-  },
-  copyButton: {
-    padding: 4,
-  },
-  shareButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  messageButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FFF5F5',
-    padding: 12,
-    borderRadius: 8,
-  },
-  emailButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FFF5F5',
-    padding: 12,
-    borderRadius: 8,
-  },
-  shareButtonText: {
-    fontSize: 14,
-    color: '#E86D6D',
-    fontWeight: '600',
   },
   footer: {
     padding: 20,

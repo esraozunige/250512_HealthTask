@@ -161,9 +161,9 @@ const PatientProfile = () => {
             {profile.profile_photo ? (
               <Image source={{ uri: profile.profile_photo }} style={styles.profileImage} />
             ) : (
-              <View style={styles.profileImage}>
-                <Ionicons name="person-circle-outline" size={120} color="#ccc" />
-              </View>
+            <View style={styles.profileImage}>
+              <Ionicons name="person-circle-outline" size={120} color="#ccc" />
+            </View>
             )}
             <TouchableOpacity style={styles.cameraButton} onPress={handlePickImage} disabled={uploading}>
               <Ionicons name="camera" size={20} color="#E86D6D" />

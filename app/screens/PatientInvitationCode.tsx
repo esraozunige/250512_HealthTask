@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +27,12 @@ const PatientInvitationCode = () => {
     specialization: string;
     message: string;
   } | null>(null);
+  const [doctorProfile, setDoctorProfile] = useState<any>(null);
+  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
+  const [groupId, setGroupId] = useState('');
 
   const handleCodeChange = (text: string, index: number) => {
     const newCode = [...code];
@@ -48,62 +55,41 @@ const PatientInvitationCode = () => {
   };
 
   const handleVerifyCode = async () => {
-    const enteredCode = code.join('');
-    if (!enteredCode || enteredCode.length !== 7) {
-      Alert.alert('Error', 'Please enter a valid invitation code.');
-      return;
-    }
-
-    // Validate code format
-    const codeRegex = /^[DP][A-Z0-9]{6}$/;
-    if (!codeRegex.test(enteredCode)) {
-      Alert.alert('Error', 'Invalid invitation code format.');
-      return;
-    }
-
+    setLoading(true);
+    setError('');
     try {
-      // 1. Check invitation
-      const invitation = await verifyInvitation(enteredCode, 'patient');
-      // 2. Fetch doctor info from inviter_id and ensure role is 'doctor'
+      const inputCode = code.join('').trim();
+      setEnteredCode(inputCode);
+      if (!inputCode) {
+        setError('Please enter the invitation code.');
+        setLoading(false);
+        return;
+      }
+      // Verify invitation code
+      const invitation = await verifyInvitation(inputCode, 'patient');
+      if (!invitation || !invitation.inviter_id) {
+        setError('Invalid or expired invitation code.');
+        setLoading(false);
+        return;
+      }
+      // Fetch doctor profile
       const { data: doctor, error: doctorError } = await supabase
         .from('users')
-        .select('id, full_name, specialization, email, role')
+        .select('full_name, specialization, email, profile_photo')
         .eq('id', invitation.inviter_id)
         .single();
-      if (doctorError || !doctor || doctor.role !== 'doctor') {
-        Alert.alert('Error', 'Doctor not found or not valid.');
+      if (doctorError || !doctor) {
+        setError('Doctor profile not found.');
+        setLoading(false);
         return;
       }
-
-      // 3. Add patient to the group
-      const { error: groupError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: invitation.groupId,
-          user_id: supabase.auth.user()?.id,
-          role: 'patient'
-        });
-      if (groupError) {
-        console.error('Failed to add to group:', groupError);
-        Alert.alert('Error', 'Failed to add to group.');
-        return;
-      }
-
-      // 4. Pass info to next screen
-      setDoctorInfo({
-        name: doctor.full_name,
-        specialization: doctor.specialization || '',
-        message: 'Your doctor has invited you to join Secret Reveal to help improve your health habits through accountability.',
-      });
-      navigation.navigate('PatientRegistration', {
-        doctorInfo: {
-          name: doctor.full_name,
-          specialization: doctor.specialization || '',
-          invitationCode: enteredCode,
-        },
-      });
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Invalid or expired invitation code.');
+      setDoctorProfile(doctor);
+      setShowDoctorModal(true);
+      setLoading(false);
+      setGroupId(invitation.groupId || '');
+    } catch (err) {
+      setError('Failed to verify code.');
+      setLoading(false);
     }
   };
 
@@ -180,6 +166,45 @@ const PatientInvitationCode = () => {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal
+        visible={showDoctorModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDoctorModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', width: 320 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>Doctor Profile</Text>
+            {doctorProfile?.profile_photo ? (
+              <Image source={{ uri: doctorProfile.profile_photo }} style={{ width: 64, height: 64, borderRadius: 32, marginBottom: 12 }} />
+            ) : (
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#E6EBFF', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="person" size={32} color="#B0B0B0" />
+              </View>
+            )}
+            <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 4 }}>{doctorProfile?.full_name}</Text>
+            <Text style={{ color: '#888', marginBottom: 4 }}>{doctorProfile?.specialization}</Text>
+            <Text style={{ color: '#888', marginBottom: 12 }}>{doctorProfile?.email}</Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#E86D6D', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 32, marginTop: 8 }}
+              onPress={() => {
+                setShowDoctorModal(false);
+                navigation.navigate('PatientRegistration', {
+                  doctorInfo: {
+                    name: doctorProfile.full_name,
+                    specialization: doctorProfile.specialization,
+                    invitationCode: enteredCode,
+                  },
+                  group_id: groupId,
+                });
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

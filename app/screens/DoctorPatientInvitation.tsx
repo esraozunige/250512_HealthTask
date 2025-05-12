@@ -38,20 +38,15 @@ const DoctorPatientInvitation = () => {
         Alert.alert('Error', 'You must be logged in to generate invitation code');
         return;
       }
-
+      // Create a group for this patient invitation
+      const { id: groupId } = await createGroup({ doctorId: session.user.id });
+      // Create invitation with groupId
       const { code, id } = await createInvitation({
         inviterId: session.user.id,
         inviteeEmail: patientEmail || undefined,
-        role: 'patient'
+        role: 'patient',
+        groupId,
       });
-
-      // Create a group when generating an invitation code
-      const { id: groupId } = await createGroup({ doctorId: session.user.id });
-
-      // Store the groupId for later use
-      // This could be in a state, context, or passed to the next screen
-      console.log('Group created with ID:', groupId);
-
       setInvitationCode(code);
       setMessage(`Hi, I'm inviting you to join Secret Reveal. Use this code: ${code} to register as my patient.`);
     } catch (error) {

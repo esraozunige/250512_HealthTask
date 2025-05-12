@@ -61,12 +61,14 @@ const DoctorAssignTask = () => {
   const [selectedProof, setSelectedProof] = useState<ProofType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [notification, setNotification] = useState<Notification | null>(null);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [activePatients, setActivePatients] = useState<Patient[]>([]);
+  const [invitedPatients, setInvitedPatients] = useState<any[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Active');
   
   useEffect(() => {
     fetchPatients();
@@ -77,13 +79,24 @@ const DoctorAssignTask = () => {
       const user = await supabase.auth.user();
       if (!user) throw new Error('No user found');
 
-      const { data, error } = await supabase
+      // Fetch active patients
+      const { data: active, error: activeError } = await supabase
         .from('users')
         .select('id, full_name, email')
-        .eq('role', 'patient');
+        .eq('role', 'patient')
+        .eq('doctor_id', user.id);
+      if (activeError) throw activeError;
+      setActivePatients(active || []);
 
-      if (error) throw error;
-      setPatients(data || []);
+      // Fetch invited patients (pending invitations)
+      const { data: invited, error: invitedError } = await supabase
+        .from('invitations')
+        .select('id, inviteeEmail, code, created_at')
+        .eq('role', 'patient')
+        .eq('inviterId', user.id)
+        .eq('status', 'pending');
+      if (invitedError) throw invitedError;
+      setInvitedPatients(invited || []);
     } catch (error) {
       console.error('Error fetching patients:', error);
       Alert.alert('Error', 'Failed to fetch patients');
@@ -114,14 +127,14 @@ const DoctorAssignTask = () => {
   };
 
   const handlePatientAction = (patient: Patient) => {
-    const updatedPatients = patients.map(p => {
+    const updatedPatients = activePatients.map(p => {
       if (p.id === patient.id) {
         const newStatus: 'assigned' | 'unassigned' = p.status === 'assigned' ? 'unassigned' : 'assigned';
         return { ...p, status: newStatus };
       }
       return p;
     });
-    setPatients(updatedPatients);
+    setActivePatients(updatedPatients);
 
     setNotification({
       patientName: patient.name,
@@ -132,7 +145,7 @@ const DoctorAssignTask = () => {
 
   const handleSave = () => {
     // Count assigned patients
-    const assignedPatientsCount = patients.filter(p => p.status === 'assigned').length;
+    const assignedPatientsCount = activePatients.filter(p => p.status === 'assigned').length;
     
     // Update task with new patient count
     const updatedTask: Task = {
@@ -185,12 +198,15 @@ const DoctorAssignTask = () => {
     }
   };
 
-  const filteredPatients = searchQuery
-    ? patients.filter(patient =>
-        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        patient.id.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : patients;
+  const filteredActivePatients = activePatients.filter(patient => {
+    const matchesSearch = patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patient.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+  const filteredInvitedPatients = invitedPatients.filter(invite => {
+    const matchesSearch = (invite.inviteeEmail || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   if (isLoading) {
     return (
@@ -312,14 +328,14 @@ const DoctorAssignTask = () => {
 
         <View style={styles.patientSection}>
           <View style={styles.patientTabs}>
-            <TouchableOpacity style={[styles.patientTab, styles.activePatientTab]}>
-              <Text style={[styles.patientTabText, styles.activePatientTabText]}>Active (12)</Text>
+            <TouchableOpacity style={[styles.patientTab, activeTab === 'Active' && styles.activePatientTab]} onPress={() => setActiveTab('Active')}>
+              <Text style={[styles.patientTabText, activeTab === 'Active' && styles.activePatientTabText]}>Active ({activePatients.length})</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.patientTab}>
-              <Text style={styles.patientTabText}>Invited (3)</Text>
+            <TouchableOpacity style={[styles.patientTab, activeTab === 'Invited' && styles.activePatientTab]} onPress={() => setActiveTab('Invited')}>
+              <Text style={[styles.patientTabText, activeTab === 'Invited' && styles.activePatientTabText]}>Invited ({invitedPatients.length})</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.patientTab}>
-              <Text style={styles.patientTabText}>Archived (5)</Text>
+            <TouchableOpacity style={[styles.patientTab, activeTab === 'Archived' && styles.activePatientTab]} onPress={() => setActiveTab('Archived')}>
+              <Text style={[styles.patientTabText, activeTab === 'Archived' && styles.activePatientTabText]}>Archived (0)</Text>
             </TouchableOpacity>
           </View>
 
@@ -345,7 +361,7 @@ const DoctorAssignTask = () => {
           </View>
 
           <View style={styles.patientList}>
-            {filteredPatients.map(patient => (
+            {activeTab === 'Active' && filteredActivePatients.map(patient => (
               <View key={patient.id} style={styles.patientItem}>
                 <View style={styles.patientInfo}>
                   <View style={styles.avatarContainer}>
@@ -375,6 +391,23 @@ const DoctorAssignTask = () => {
                 </TouchableOpacity>
               </View>
             ))}
+            {activeTab === 'Invited' && filteredInvitedPatients.map(invite => (
+              <View key={invite.id} style={styles.patientItem}>
+                <View style={styles.patientInfo}>
+                  <View style={styles.avatarContainer}>
+                    <Ionicons name="mail" size={40} color="#FFA500" />
+                  </View>
+                  <View>
+                    <Text style={styles.patientName}>{invite.inviteeEmail}</Text>
+                    <Text style={styles.patientId}>Invitation Code: {invite.code}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#FFA500', fontWeight: 'bold' }}>Invited</Text>
+              </View>
+            ))}
+            {activeTab === 'Archived' && (
+              <Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>No archived patients</Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -389,7 +422,7 @@ const DoctorAssignTask = () => {
               <TouchableOpacity 
                 style={styles.undoButton}
                 onPress={() => {
-                  const patient = patients.find(p => p.name === notification.patientName);
+                  const patient = activePatients.find(p => p.name === notification.patientName);
                   if (patient) handlePatientAction(patient);
                 }}
               >

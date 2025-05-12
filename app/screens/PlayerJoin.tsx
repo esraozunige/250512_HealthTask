@@ -51,7 +51,7 @@ const PlayerJoin = () => {
         .single();
       if (groupError || !group) {
         setGroupInfo(null);
-        setError('Group not found.');
+        setError('Group not found or invitation code is invalid.');
         return;
       }
       // 3. Insert into group_members
