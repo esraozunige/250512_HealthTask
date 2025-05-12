@@ -224,13 +224,6 @@ const DoctorLogin = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.landingPageContainer}>
-          <Text style={styles.noAccountText}>Not a doctor? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Landing')}>
-            <Text style={styles.createAccountText}>LandingPage</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.termsContainer}>
           <Text style={styles.termsText}>
             By signing in, you agree to our{' '}
@@ -365,7 +358,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4A6FFF',
     fontWeight: '600',
-    textDecorationLine: 'none',
   },
   termsContainer: {
     alignItems: 'center',
@@ -377,11 +369,6 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     color: '#4A6FFF',
-  },
-  landingPageContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 24,
   },
 });
 

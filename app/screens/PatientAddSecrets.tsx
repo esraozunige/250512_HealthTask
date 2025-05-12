@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -30,31 +30,17 @@ const PatientAddSecrets = () => {
   const route = useRoute<PatientAddSecretsRouteProp>();
   const { group_id } = route.params;
   const [currentSecret, setCurrentSecret] = useState('');
-  const [secrets, setSecrets] = useState<Secret[]>([]);
+  const [secrets, setSecrets] = useState<string[]>([]);
   const requiredSecrets = 2;
   const remainingSecrets = requiredSecrets - secrets.length;
   const [isScreening, setIsScreening] = useState(false);
-
-  useEffect(() => {
-    const fetchSecrets = async () => {
-      const session = supabase.auth.session();
-      const userId = session?.user?.id;
-      if (!userId) return;
-      const { data, error } = await supabase
-        .from('secrets')
-        .select('*')
-        .eq('user_id', userId);
-      if (!error && data) setSecrets(data);
-    };
-    fetchSecrets();
-  }, []);
 
   const handleAddSecret = async () => {
     if (!currentSecret.trim()) {
       Alert.alert('Error', 'Please enter a secret');
       return;
     }
-    if (secrets.some(s => s.content === currentSecret.trim())) {
+    if (secrets.includes(currentSecret.trim())) {
       Alert.alert('Error', 'You have already added this secret');
       return;
     }
@@ -66,30 +52,7 @@ const PatientAddSecrets = () => {
         setIsScreening(false);
         return;
       }
-      // Save to DB
-      const session = supabase.auth.session();
-      const userId = session?.user?.id;
-      if (!userId) {
-        Alert.alert('Error', 'You must be logged in to add secrets');
-        setIsScreening(false);
-        return;
-      }
-      const { data, error } = await supabase
-        .from('secrets')
-        .insert({
-          user_id: userId,
-          content: currentSecret.trim(),
-          group_id: group_id,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (error) {
-        Alert.alert('Error', 'Could not save secret.');
-        setIsScreening(false);
-        return;
-      }
-      setSecrets([...secrets, data]);
+      setSecrets([...secrets, currentSecret.trim()]);
       setCurrentSecret('');
     } catch (err) {
       Alert.alert('Error', 'Could not screen secret. Please try again.');
@@ -98,15 +61,42 @@ const PatientAddSecrets = () => {
     }
   };
 
-  const handleRemoveSecret = async (secretToRemove: string) => {
-    const secretObj = secrets.find(s => s.content === secretToRemove);
-    if (!secretObj) return;
-    const { error } = await supabase.from('secrets').delete().eq('id', secretObj.id);
-    if (!error) setSecrets(secrets.filter(s => s.id !== secretObj.id));
+  const handleRemoveSecret = (secretToRemove: string) => {
+    setSecrets(secrets.filter(secret => secret !== secretToRemove));
   };
 
   const handleContinue = async () => {
-    navigation.navigate('PatientDashboard');
+    try {
+      const session = supabase.auth.session();
+      const userId = session?.user?.id;
+      if (!userId) {
+        Alert.alert('Error', 'You must be logged in to add secrets');
+        return;
+      }
+      if (!group_id) {
+        Alert.alert('Error', 'Group not found.');
+        return;
+      }
+      const { error: insertError } = await supabase
+        .from('secrets')
+        .insert(
+          secrets
+            .filter(secret => secret.trim())
+            .map(secret => ({
+            user_id: userId,
+              content: secret,
+            group_id: group_id,
+            created_at: new Date().toISOString(),
+          }))
+        );
+      if (insertError) {
+        Alert.alert('Error', 'Could not save secrets.');
+        return;
+      }
+      navigation.navigate('PatientDashboard');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save secrets');
+    }
   };
 
   return (
@@ -165,13 +155,13 @@ const PatientAddSecrets = () => {
           <View style={styles.secretsSection}>
             <Text style={styles.secretsCount}>Added Secrets: {secrets.length}/{requiredSecrets}</Text>
             {secrets.map(secret => (
-              <View key={secret.id} style={styles.secretItem}>
+              <View key={secret} style={styles.secretItem}>
                 <View style={styles.secretContent}>
                   <Ionicons name="lock-closed" size={20} color="#4A6FFF" />
-                  <Text style={styles.secretText}>{secret.content}</Text>
+                  <Text style={styles.secretText}>{secret}</Text>
                 </View>
                 <TouchableOpacity 
-                  onPress={() => handleRemoveSecret(secret.content)}
+                  onPress={() => handleRemoveSecret(secret)}
                   style={styles.removeButton}
                 >
                   <Ionicons name="trash-outline" size={20} color="#666" />

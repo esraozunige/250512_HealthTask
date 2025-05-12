@@ -15,7 +15,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 import { useDoctor } from '../context/DoctorContext';
-import { supabase } from '../../lib/supabase';
 
 const DoctorSettings = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -35,19 +34,6 @@ const DoctorSettings = () => {
       });
     }
   }, [route.params, setDoctor]);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setDoctor({} as any); // Clear doctor context (set to empty object)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Landing' }],
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   if (!doctor) {
     return (
@@ -153,11 +139,6 @@ const DoctorSettings = () => {
         <Text style={styles.sectionHeader}>Privacy</Text>
         {/* Add privacy rows here if needed */}
         <View style={{ height: 32 }} />
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </ScrollView>
       <DoctorBottomNav activeTab="Profile" />
     </SafeAreaView>
@@ -258,26 +239,6 @@ const styles = StyleSheet.create({
   },
   rowIcon: { marginRight: 16 },
   rowText: { fontSize: 16, color: '#222', fontWeight: '500' },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4A6FFF',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
 });
 
 export default DoctorSettings; 

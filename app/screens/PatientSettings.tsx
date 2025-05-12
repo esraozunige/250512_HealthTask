@@ -13,7 +13,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import PatientBottomNav from '../components/PatientBottomNav';
-import { supabase } from '../../lib/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PatientSettings'>;
 
@@ -28,24 +27,17 @@ const PatientSettings = () => {
     rightElement?: React.ReactNode
   ) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
-      <Ionicons name={icon as any} size={24} color="#4A6FFF" style={styles.settingIcon} />
-      <Text style={styles.settingTitle}>{title}</Text>
-      {rightElement}
-      <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
+      <View style={styles.settingLeft}>
+        <Ionicons name={icon as any} size={24} color="#666" />
+        <Text style={styles.settingText}>{title}</Text>
+      </View>
+      <View style={styles.settingRight}>
+        {rightElement || (
+          <Ionicons name="chevron-forward" size={24} color="#666" />
+        )}
+      </View>
     </TouchableOpacity>
   );
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Landing' }],
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,8 +54,16 @@ const PatientSettings = () => {
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Settings</Text>
-          {renderSettingItem('person-circle-outline', 'My Profile', () => navigation.navigate('PatientProfile'))}
-          {renderSettingItem('person-add-outline', 'Invite Players', () => navigation.navigate('PatientInvitePlayers', { group_id: '' }))}
+          {renderSettingItem(
+            'person-outline',
+            'My Profile',
+            () => navigation.navigate('PatientProfile')
+          )}
+          {renderSettingItem(
+            'lock-closed-outline',
+            'Manage Secrets',
+            () => navigation.navigate('PatientManageSecrets')
+          )}
           {renderSettingItem(
             'list-outline',
             'Manage Tasks',
@@ -116,13 +116,7 @@ const PatientSettings = () => {
         </View>
       </ScrollView>
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-
-      <PatientBottomNav activeTab="Settings" />
+      <PatientBottomNav activeTab="Profile" />
     </SafeAreaView>
   );
 };
@@ -166,32 +160,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
   },
-  settingIcon: {
-    marginRight: 12,
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  settingTitle: {
+  settingText: {
     fontSize: 16,
     color: '#333',
   },
-  logoutButton: {
+  settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E86D6D',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });
 

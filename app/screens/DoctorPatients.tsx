@@ -73,17 +73,10 @@ const DoctorPatients = () => {
   const [activeTab, setActiveTab] = useState<'Active Patients' | 'Pending Invites'>('Active Patients');
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
 
-  // Calculate stats
-  const activePatients = patients.filter(p => p.type === 'active');
-  const needsAttentionCount = activePatients.filter(p => p.status === 'Needs Attention').length;
-  const avgStreak = activePatients.length > 0 ?
-    Math.round(activePatients.reduce((sum, p) => sum + (p.streak || 0), 0) / activePatients.length) + 'd'
-    : '0d';
-
   const stats = {
-    active: activePatients.length,
-    needsAttention: needsAttentionCount,
-    avgStreak,
+    active: patients.filter(p => p.type === 'active').length,
+    needsHelp: patients.filter(p => p.status === 'Needs Attention').length,
+    avgStreak: '14d',
   };
 
   const filteredPatients = patients.filter(patient => {
@@ -175,8 +168,8 @@ const DoctorPatients = () => {
           <Text style={styles.statLabel}>Active</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.needsAttention}</Text>
-          <Text style={styles.statLabel}>Needs Attention</Text>
+          <Text style={styles.statValue}>{stats.needsHelp}</Text>
+          <Text style={styles.statLabel}>Needs Help</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statValue}>{stats.avgStreak}</Text>
