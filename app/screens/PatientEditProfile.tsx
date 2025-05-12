@@ -39,7 +39,7 @@ const PatientEditProfile = () => {
       }
 
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('full_name, email, phone')
         .eq('id', userId)
         .single();
@@ -75,7 +75,7 @@ const PatientEditProfile = () => {
       }
 
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({
           full_name: fullName.trim(),
           phone: phone.trim(),
