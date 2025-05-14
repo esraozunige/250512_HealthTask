@@ -254,7 +254,7 @@ const DoctorCreateTask = () => {
               maxLength={2}
             />
             <Text style={styles.timeColon}>:</Text>
-            <TextInput
+          <TextInput
               style={styles.timeInput}
               value={minute}
               onChangeText={setMinute}
@@ -264,11 +264,11 @@ const DoctorCreateTask = () => {
             <TouchableOpacity style={styles.amPmButton} onPress={() => setAmPm(ampm === 'AM' ? 'PM' : 'AM')}>
               <Text style={styles.amPmText}>{ampm}</Text>
             </TouchableOpacity>
-          </View>
+        </View>
           <Text style={styles.label}>Proof Required</Text>
           <View style={styles.proofOptions}>
             {PROOFS.map(type => (
-              <TouchableOpacity
+          <TouchableOpacity
                 key={type.key}
                 style={[styles.proofButton, selectedProof.includes(type.key) && styles.selectedProof]}
                 onPress={() => {
@@ -278,10 +278,10 @@ const DoctorCreateTask = () => {
                     setSelectedProof([...selectedProof, type.key]);
                   }
                 }}
-              >
+          >
                 {type.icon}
                 <Text style={styles.proofText}>{type.label}</Text>
-              </TouchableOpacity>
+          </TouchableOpacity>
             ))}
           </View>
         </View>

@@ -231,18 +231,18 @@ const DoctorAssignTask = () => {
           } else if (!pendingTask) {
             // Create new task if not already pending
             await supabase
-              .from('tasks')
-              .insert({
-                title,
-                description,
-                frequency,
-                due_hour: `${hour}:${minute} ${ampm}`,
-                proof_type: selectedProof.join(','),
-                assigned_by: user.id,
+        .from('tasks')
+        .insert({
+          title,
+          description,
+          frequency,
+          due_hour: `${hour}:${minute} ${ampm}`,
+          proof_type: selectedProof.join(','),
+          assigned_by: user.id,
                 assigned_to: patient.id,
                 status: 'pending',
                 created_at: now,
-              });
+        });
           }
         } else if (patient.status === 'suspended') {
           if (pendingTask) {

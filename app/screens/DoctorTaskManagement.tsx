@@ -134,22 +134,22 @@ const DoctorTaskManagement = () => {
           <Text>No tasks found.</Text>
         ) : (
           tasks.map(template => (
-            <View key={template.id} style={styles.templateCard}>
+          <View key={template.id} style={styles.templateCard}>
               <View style={[styles.templateIcon, { backgroundColor: template.iconBgColor || '#E6EBFF' }]}>
-                <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
-              </View>
-              <View style={styles.templateInfo}>
-                <Text style={styles.templateTitle}>{template.title}</Text>
-                <Text style={styles.templateDescription}>{template.description}</Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.patientCountButton}
-                onPress={() => handleAssignTask(template)}
-              >
-                <Text style={styles.patientCount}>{template.patientCount}</Text>
-                <Text style={styles.patientCountLabel}>patients</Text>
-              </TouchableOpacity>
+              <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
             </View>
+            <View style={styles.templateInfo}>
+              <Text style={styles.templateTitle}>{template.title}</Text>
+              <Text style={styles.templateDescription}>{template.description}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.patientCountButton}
+              onPress={() => handleAssignTask(template)}
+            >
+              <Text style={styles.patientCount}>{template.patientCount}</Text>
+              <Text style={styles.patientCountLabel}>patients</Text>
+            </TouchableOpacity>
+          </View>
           ))
         )}
       </ScrollView>
