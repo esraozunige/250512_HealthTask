@@ -8,6 +8,8 @@ import {
   ScrollView,
   Image,
   Switch,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -38,9 +40,12 @@ const DoctorSettings = () => {
 
   if (!doctor) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 44 }]}> 
+          <Text style={styles.headerTitle}>Settings</Text>
+        </View>
         <Text style={{ textAlign: 'center', marginTop: 40 }}>Loading doctor info...</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -49,111 +54,111 @@ const DoctorSettings = () => {
   const displaySpecialty = doctor.specialty && doctor.specialty.trim() ? doctor.specialty : 'Specialty not set';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity style={styles.headerIcon}>
-              <Ionicons name="notifications-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-            {doctor.profilePhotoUrl ? (
-              <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.headerAvatar} />
-            ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <Ionicons name="person" size={24} color="#B0B0B0" />
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Profile Card - Centered and aligned */}
-        <View style={styles.profileCardCentered}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 65 }]}> 
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity style={styles.headerIcon}>
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
+          </TouchableOpacity>
           {doctor.profilePhotoUrl ? (
-            <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.profileAvatarLarge} />
+            <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.headerAvatar} />
           ) : (
-            <View style={styles.profileAvatarLargePlaceholder}>
-              <Ionicons name="person" size={48} color="#B0B0B0" />
+            <View style={styles.headerAvatarPlaceholder}>
+              <Ionicons name="person" size={24} color="#B0B0B0" />
             </View>
           )}
-          <Text style={styles.profileNameLarge}>{displayName}</Text>
-          <Text style={styles.profileSpecialtyLarge}>{displaySpecialty}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('DoctorProfile', { editMode: true })}>
-            <Text style={styles.editProfileLinkLarge}>✎ Edit Profile</Text>
-          </TouchableOpacity>
         </View>
-
-        {/* Account Section */}
-        <Text style={styles.sectionHeader}>Account</Text>
-        <View style={styles.sectionCard}>
-          <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('DoctorProfile', { editMode: true })}>
-            <Ionicons name="person-circle-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Personal Information</Text>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('DoctorPatientInvitation', undefined)}>
-            <Ionicons name="person-add-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Invite Patients</Text>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.row}>
-            <Ionicons name="lock-closed-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Password & Security</Text>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Notifications Section */}
-        <Text style={styles.sectionHeader}>Notifications</Text>
-        <View style={styles.sectionCard}>
-          <View style={styles.row}>
-            <Ionicons name="notifications-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Push Notifications</Text>
-            <Switch
-              value={pushEnabled}
-              onValueChange={setPushEnabled}
-              trackColor={{ false: '#E5E5E5', true: '#7B8EF9' }}
-              thumbColor={pushEnabled ? '#4A6FFF' : '#ccc'}
-              style={{ marginLeft: 'auto' }}
-            />
+      </View>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView style={styles.scrollView}>
+          {/* Profile Card - Centered and aligned */}
+          <View style={styles.profileCardCentered}>
+            {doctor.profilePhotoUrl ? (
+              <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.profileAvatarLarge} />
+            ) : (
+              <View style={styles.profileAvatarLargePlaceholder}>
+                <Ionicons name="person" size={48} color="#B0B0B0" />
+              </View>
+            )}
+            <Text style={styles.profileNameLarge}>{displayName}</Text>
+            <Text style={styles.profileSpecialtyLarge}>{displaySpecialty}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('DoctorProfile', { editMode: true })}>
+              <Text style={styles.editProfileLinkLarge}>✎ Edit Profile</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.row}>
-            <Ionicons name="mail-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Email Notifications</Text>
-            <Switch
-              value={emailEnabled}
-              onValueChange={setEmailEnabled}
-              trackColor={{ false: '#E5E5E5', true: '#7B8EF9' }}
-              thumbColor={emailEnabled ? '#4A6FFF' : '#ccc'}
-              style={{ marginLeft: 'auto' }}
-            />
-          </View>
-          <TouchableOpacity style={styles.row}>
-            <Ionicons name="settings-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
-            <Text style={styles.rowText}>Notification Preferences</Text>
-            <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Privacy Section */}
-        <Text style={styles.sectionHeader}>Privacy</Text>
-        {/* Add privacy rows here if needed */}
-        <View style={{ height: 32 }} />
-      </ScrollView>
-      {/* Logout Button */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={async () => {
-          await supabase.auth.signOut();
-          navigation.reset({ index: 0, routes: [{ name: 'DoctorLogin' }] });
-        }}
-      >
-        <Ionicons name="log-out-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
-      <DoctorBottomNav activeTab="Profile" />
-    </SafeAreaView>
+          {/* Account Section */}
+          <Text style={styles.sectionHeader}>Account</Text>
+          <View style={styles.sectionCard}>
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('DoctorProfile', { editMode: true })}>
+              <Ionicons name="person-circle-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Personal Information</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('DoctorPatientInvitation', undefined)}>
+              <Ionicons name="person-add-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Invite Patients</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.row}>
+              <Ionicons name="lock-closed-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Password & Security</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Notifications Section */}
+          <Text style={styles.sectionHeader}>Notifications</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.row}>
+              <Ionicons name="notifications-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Push Notifications</Text>
+              <Switch
+                value={pushEnabled}
+                onValueChange={setPushEnabled}
+                trackColor={{ false: '#E5E5E5', true: '#7B8EF9' }}
+                thumbColor={pushEnabled ? '#4A6FFF' : '#ccc'}
+                style={{ marginLeft: 'auto' }}
+              />
+            </View>
+            <View style={styles.row}>
+              <Ionicons name="mail-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Email Notifications</Text>
+              <Switch
+                value={emailEnabled}
+                onValueChange={setEmailEnabled}
+                trackColor={{ false: '#E5E5E5', true: '#7B8EF9' }}
+                thumbColor={emailEnabled ? '#4A6FFF' : '#ccc'}
+                style={{ marginLeft: 'auto' }}
+              />
+            </View>
+            <TouchableOpacity style={styles.row}>
+              <Ionicons name="settings-outline" size={24} color="#7B8EF9" style={styles.rowIcon} />
+              <Text style={styles.rowText}>Notification Preferences</Text>
+              <Ionicons name="chevron-forward" size={20} color="#B0B0B0" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Privacy Section */}
+          <Text style={styles.sectionHeader}>Privacy</Text>
+          {/* Add privacy rows here if needed */}
+          <View style={{ height: 32 }} />
+        </ScrollView>
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={async () => {
+            await supabase.auth.signOut();
+            navigation.reset({ index: 0, routes: [{ name: 'DoctorLogin' }] });
+          }}
+        >
+          <Ionicons name="log-out-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+        <DoctorBottomNav activeTab="Profile" />
+      </SafeAreaView>
+    </View>
   );
 };
 

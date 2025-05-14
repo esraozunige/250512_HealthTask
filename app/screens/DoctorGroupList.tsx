@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -166,81 +168,91 @@ const DoctorGroupList = () => {
   const totalTasks = groups.reduce((sum, g) => sum + g.tasks, 0);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Groups</Text>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="notifications" size={24} color="#4A6FFF" />
-            <View style={styles.badge}><Text style={styles.badgeText}>3</Text></View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="settings-outline" size={24} color="#4A6FFF" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search groups"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-        <View style={styles.tabsRow}>
-          <Text style={[styles.tab, styles.activeTab]}>Groups</Text>
-          <Text style={styles.tab}>Recent</Text>
-        </View>
-        <View style={styles.statsCard}>
-          <View style={styles.statBox}><Text style={styles.statValue}>{totalGroups}</Text><Text style={styles.statLabel}>Total Groups</Text></View>
-          <View style={styles.statBox}><Text style={styles.statValue}>{totalMembers}</Text><Text style={styles.statLabel}>Members</Text></View>
-          <View style={styles.statBox}><Text style={styles.statValue}>{totalTasks}</Text><Text style={styles.statLabel}>Active Tasks</Text></View>
-          <TouchableOpacity style={styles.viewAll}><Text style={styles.viewAllText}>View All</Text></TouchableOpacity>
-        </View>
-        <ScrollView style={styles.groupsList} contentContainerStyle={{ paddingBottom: 16 }}>
-          {filteredGroups.map(group => (
-            <TouchableOpacity
-              key={group.id}
-              style={styles.groupCard}
-              onPress={() => navigation.navigate('DoctorGroup', { group_id: group.id })}
-            >
-              <View style={styles.groupCardHeader}>
-                <Ionicons name="people" size={24} color="#4A6FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.groupName}>{group.name}</Text>
-                <Text style={styles.groupStatus}>• {group.status}</Text>
-                {group.unread > 0 && (
-                  <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>{group.unread}</Text></View>
-                )}
-              </View>
-              <View style={styles.groupCardDetails}>
-                <View style={styles.avatarsRow}>
-                  {group.avatars.map((avatar, idx) => (
-                    <View key={idx} style={[styles.avatarWrapper, { left: idx * -10 }] }>
-                      <View style={styles.avatarCircle}>
-                        <Ionicons name="person" size={16} color="#fff" />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-                <Text style={styles.groupInfo}>{group.members} members</Text>
-                <Ionicons name="calendar" size={16} color="#4A6FFF" style={{ marginLeft: 8 }} />
-                <Text style={styles.groupInfo}>{group.lastActivity}</Text>
-                <Ionicons name="checkmark-circle" size={16} color="#4A6FFF" style={{ marginLeft: 8 }} />
-                <Text style={styles.groupInfo}>{group.tasks} tasks</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 65 }]}> 
+        <Text style={styles.headerTitle}>My Groups</Text>
+        <TouchableOpacity style={styles.headerIcon}>
+          <Ionicons name="notifications" size={24} color="white" />
+          <View style={styles.badge}><Text style={styles.badgeText}>3</Text></View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerIcon}>
+          <Ionicons name="settings-outline" size={24} color="white" />
+        </TouchableOpacity>
       </View>
-      <DoctorBottomNav activeTab="Groups" />
-    </SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search groups"
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+          <View style={styles.tabsRow}>
+            <Text style={[styles.tab, styles.activeTab]}>Groups</Text>
+            <Text style={styles.tab}>Recent</Text>
+          </View>
+          <View style={styles.statsCard}>
+            <View style={styles.statBox}><Text style={styles.statValue}>{totalGroups}</Text><Text style={styles.statLabel}>Total Groups</Text></View>
+            <View style={styles.statBox}><Text style={styles.statValue}>{totalMembers}</Text><Text style={styles.statLabel}>Members</Text></View>
+            <View style={styles.statBox}><Text style={styles.statValue}>{totalTasks}</Text><Text style={styles.statLabel}>Active Tasks</Text></View>
+            <TouchableOpacity style={styles.viewAll}><Text style={styles.viewAllText}>View All</Text></TouchableOpacity>
+          </View>
+          <ScrollView style={styles.groupsList} contentContainerStyle={{ paddingBottom: 16 }}>
+            {filteredGroups.map(group => (
+              <TouchableOpacity
+                key={group.id}
+                style={styles.groupCard}
+                onPress={() => navigation.navigate('DoctorGroup', { group_id: group.id })}
+              >
+                <View style={styles.groupCardHeader}>
+                  <Ionicons name="people" size={24} color="#4A6FFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.groupName}>{group.name}</Text>
+                  <Text style={styles.groupStatus}>• {group.status}</Text>
+                  {group.unread > 0 && (
+                    <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>{group.unread}</Text></View>
+                  )}
+                </View>
+                <View style={styles.groupCardDetails}>
+                  <View style={styles.avatarsRow}>
+                    {group.avatars.map((avatar, idx) => (
+                      <View key={idx} style={[styles.avatarWrapper, { left: idx * -10 }] }>
+                        <View style={styles.avatarCircle}>
+                          <Ionicons name="person" size={16} color="#fff" />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={styles.groupInfo}>{group.members} members</Text>
+                  <Ionicons name="calendar" size={16} color="#4A6FFF" style={{ marginLeft: 8 }} />
+                  <Text style={styles.groupInfo}>{group.lastActivity}</Text>
+                  <Ionicons name="checkmark-circle" size={16} color="#4A6FFF" style={{ marginLeft: 8 }} />
+                  <Text style={styles.groupInfo}>{group.tasks} tasks</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        <DoctorBottomNav activeTab="Groups" />
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, backgroundColor: '#fff' },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#4A6FFF' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 20,
+    backgroundColor: '#4A6FFF',
+  },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white' },
   headerIcon: { marginLeft: 12 },
   badge: { position: 'absolute', top: -6, right: -6, backgroundColor: '#E86D6D', borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1 },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },

@@ -7,6 +7,8 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -120,54 +122,66 @@ const DoctorTaskList = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 44 }]}> 
+          <Text style={styles.headerTitle}>Tasks</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E86D6D" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 44 }]}> 
+          <Text style={styles.headerTitle}>Tasks</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchTasks}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 44 }]}> 
         <Text style={styles.headerTitle}>Tasks</Text>
         <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-
-      <FlatList
-        data={tasks}
-        renderItem={renderTaskItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="list-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No tasks found</Text>
-            <TouchableOpacity style={styles.createButton} onPress={handleAddTask}>
-              <Text style={styles.createButtonText}>Create New Task</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-
+      <SafeAreaView style={{ flex: 1 }}>
+        <FlatList
+          data={tasks}
+          renderItem={renderTaskItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="list-outline" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>No tasks found</Text>
+              <TouchableOpacity style={styles.createButton} onPress={handleAddTask}>
+                <Text style={styles.createButtonText}>Create New Task</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </SafeAreaView>
       <DoctorBottomNav activeTab="Tasks" />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -180,21 +194,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 20,
+    backgroundColor: '#4A6FFF',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: 'white',
   },
   addButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E86D6D',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },

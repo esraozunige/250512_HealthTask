@@ -8,6 +8,8 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -172,8 +174,8 @@ const DoctorPatients = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 65 }]}> 
         <View>
           <Text style={styles.headerTitle}>My Patients</Text>
           <View style={styles.notificationIcon}>
@@ -185,66 +187,68 @@ const DoctorPatients = () => {
         </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search patients..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search patients..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.active}</Text>
-          <Text style={styles.statLabel}>Active</Text>
+        <View style={styles.statsContainer}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats.active}</Text>
+            <Text style={styles.statLabel}>Active</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats.needsHelp}</Text>
+            <Text style={styles.statLabel}>Needs Help</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats.avgStreak}</Text>
+            <Text style={styles.statLabel}>Avg. Streak</Text>
+          </View>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.needsHelp}</Text>
-          <Text style={styles.statLabel}>Needs Help</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.avgStreak}</Text>
-          <Text style={styles.statLabel}>Avg. Streak</Text>
-        </View>
-      </View>
 
-      <View style={styles.tabContainer}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Active Patients' && styles.activeTab]}
+            onPress={() => setActiveTab('Active Patients')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Active Patients' && styles.activeTabText]}>
+              Active Patients ({patients.filter(p => p.type === 'active').length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'Pending Invites' && styles.activeTab]}
+            onPress={() => setActiveTab('Pending Invites')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Pending Invites' && styles.activeTabText]}>
+              Pending Invites ({patients.filter(p => p.type === 'pending').length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionTitle}>Patient List</Text>
+
+        <ScrollView style={styles.patientList}>
+          {filteredPatients.map(renderPatientCard)}
+        </ScrollView>
+
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'Active Patients' && styles.activeTab]}
-          onPress={() => setActiveTab('Active Patients')}
+          style={styles.inviteButton}
+          onPress={() => navigation.navigate('DoctorPatientInvitation')}
         >
-          <Text style={[styles.tabText, activeTab === 'Active Patients' && styles.activeTabText]}>
-            Active Patients ({patients.filter(p => p.type === 'active').length})
-          </Text>
+          <Ionicons name="add" size={20} color="#4A6FFF" />
+          <Text style={styles.inviteButtonText}>Invite New Patient</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'Pending Invites' && styles.activeTab]}
-          onPress={() => setActiveTab('Pending Invites')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Pending Invites' && styles.activeTabText]}>
-            Pending Invites ({patients.filter(p => p.type === 'pending').length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.sectionTitle}>Patient List</Text>
-
-      <ScrollView style={styles.patientList}>
-        {filteredPatients.map(renderPatientCard)}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={styles.inviteButton}
-        onPress={() => navigation.navigate('DoctorPatientInvitation')}
-      >
-        <Ionicons name="add" size={20} color="#4A6FFF" />
-        <Text style={styles.inviteButtonText}>Invite New Patient</Text>
-      </TouchableOpacity>
+      </SafeAreaView>
 
       <DoctorBottomNav activeTab="Patients" />
-    </SafeAreaView>
+    </View>
   );
 };
 

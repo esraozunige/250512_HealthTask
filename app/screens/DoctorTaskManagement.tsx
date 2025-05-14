@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -119,110 +121,84 @@ const DoctorTaskManagement = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 65 }]}> 
         <Text style={styles.headerTitle}>Task Management</Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.notificationIcon}>
-            <Ionicons name="notifications-outline" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle" size={32} color="white" />
-          </View>
-        </View>
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.statsContainer}>
-          <View style={[styles.statBox, { backgroundColor: '#F5F7FF' }]}>
-            <Text style={styles.statLabel}>Active Tasks</Text>
-            <Text style={styles.statValue}>{stats.activeTasks}</Text>
-          </View>
-          <View style={[styles.statBox, { backgroundColor: '#F0F9F0' }]}>
-            <Text style={styles.statLabel}>Completion Rate</Text>
-            <Text style={styles.statValue}>{stats.completionRate}</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.createTaskButton}
-          onPress={handleAddTask}
-        >
-          <Ionicons name="add" size={24} color="white" />
-          <Text style={styles.createTaskText}>Create Task</Text>
+        <TouchableOpacity style={styles.headerIcon}>
+          <Ionicons name="notifications" size={24} color="white" />
         </TouchableOpacity>
-
-        <Text style={styles.sectionTitle}>Task Templates</Text>
-
-        {loading ? (
-          <Text>Loading...</Text>
-        ) : tasks.length === 0 ? (
-          <Text>No tasks found.</Text>
-        ) : (
-          tasks.map(template => (
-          <View key={template.id} style={styles.templateCard}>
-              <View style={[styles.templateIcon, { backgroundColor: template.iconBgColor || '#E6EBFF' }]}>
-              <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
+        <TouchableOpacity style={styles.headerIcon}>
+          <Ionicons name="person-circle" size={32} color="white" />
+        </TouchableOpacity>
+      </View>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView style={styles.content}>
+          <View style={styles.statsContainer}>
+            <View style={[styles.statBox, { backgroundColor: '#F5F7FF' }]}>
+              <Text style={styles.statLabel}>Active Tasks</Text>
+              <Text style={styles.statValue}>{stats.activeTasks}</Text>
             </View>
-            <View style={styles.templateInfo}>
-              <Text style={styles.templateTitle}>{template.title}</Text>
-              <Text style={styles.templateDescription}>{template.description}</Text>
+            <View style={[styles.statBox, { backgroundColor: '#F0F9F0' }]}>
+              <Text style={styles.statLabel}>Completion Rate</Text>
+              <Text style={styles.statValue}>{stats.completionRate}</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.patientCountButton}
-              onPress={() => handleAssignTask(template)}
-            >
-              <Text style={styles.patientCount}>{template.patientCount}</Text>
-              <Text style={styles.patientCountLabel}>patients</Text>
-            </TouchableOpacity>
           </View>
-          ))
-        )}
-      </ScrollView>
 
-      <DoctorBottomNav activeTab="Tasks" />
-    </SafeAreaView>
+          <TouchableOpacity 
+            style={styles.createTaskButton}
+            onPress={handleAddTask}
+          >
+            <Ionicons name="add" size={24} color="white" />
+            <Text style={styles.createTaskText}>Create Task</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.sectionTitle}>Task Templates</Text>
+
+          {loading ? (
+            <Text>Loading...</Text>
+          ) : tasks.length === 0 ? (
+            <Text>No tasks found.</Text>
+          ) : (
+            tasks.map(template => (
+            <View key={template.id} style={styles.templateCard}>
+                <View style={[styles.templateIcon, { backgroundColor: template.iconBgColor || '#E6EBFF' }]}>
+                <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
+              </View>
+              <View style={styles.templateInfo}>
+                <Text style={styles.templateTitle}>{template.title}</Text>
+                <Text style={styles.templateDescription}>{template.description}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.patientCountButton}
+                onPress={() => handleAssignTask(template)}
+              >
+                <Text style={styles.patientCount}>{template.patientCount}</Text>
+                <Text style={styles.patientCountLabel}>patients</Text>
+              </TouchableOpacity>
+            </View>
+            ))
+          )}
+        </ScrollView>
+
+        <DoctorBottomNav activeTab="Tasks" />
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
-    backgroundColor: '#4A6FFF',
-    padding: 20,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 0, // will be set dynamically
+    paddingBottom: 20,
+    backgroundColor: '#4A6FFF',
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white' },
+  headerIcon: { marginLeft: 12 },
   content: {
     flex: 1,
     padding: 16,

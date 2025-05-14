@@ -278,9 +278,10 @@ export default function App() {
         <SafeAreaProvider>
           <NavigationContainer>
             <Stack.Navigator
-              screenOptions={{
+              screenOptions={({ route }) => ({
                 headerShown: false,
-              }}
+                animation: route.name === 'DoctorPatients' ? 'slide_from_right' : 'slide_from_left',
+              })}
               initialRouteName="Landing"
             >
               <Stack.Screen name="Landing" component={LandingScreen} />
