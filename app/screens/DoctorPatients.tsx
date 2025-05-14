@@ -14,6 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import DoctorBottomNav from '../components/DoctorBottomNav';
+import { supabase } from '../../lib/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DoctorPatients'>;
 type DoctorPatientsRouteProp = RouteProp<RootStackParamList, 'DoctorPatients'>;
@@ -29,54 +30,86 @@ type Patient = {
   email?: string;
   invitationCode?: string;
   registrationDate?: string;
-  type: 'active' | 'pending';
+  type: 'active' | 'pending' | 'needs_help';
 };
-
-const mockPatients: Patient[] = [
-  {
-    id: 'PT-0024',
-    name: 'Sarah Johnson',
-    image: 'https://example.com/avatar1.jpg',
-    status: 'Needs Attention',
-    streak: 3,
-    lastActivity: '3 days',
-    tasksStatus: '2 missed',
-    type: 'active'
-  },
-  {
-    id: 'PT-0031',
-    name: 'Michael Chen',
-    image: 'https://example.com/avatar2.jpg',
-    status: 'Good',
-    streak: 28,
-    lastActivity: '28 days',
-    tasksStatus: 'All complete',
-    type: 'active'
-  },
-  {
-    id: 'PT-0042',
-    name: 'Emily Rodriguez',
-    email: 'emily.r@example.com',
-    image: 'https://example.com/avatar3.jpg',
-    status: 'Good',
-    streak: 0,
-    lastActivity: 'Pending',
-    tasksStatus: 'No tasks',
-    invitationCode: '789012',
-    type: 'pending'
-  },
-];
 
 const DoctorPatients = () => {
   const navigation = useNavigation<NavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'Active Patients' | 'Pending Invites'>('Active Patients');
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const stats = {
     active: patients.filter(p => p.type === 'active').length,
     needsHelp: patients.filter(p => p.status === 'Needs Attention').length,
     avgStreak: '14d',
+  };
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const fetchPatients = async () => {
+    try {
+      setIsLoading(true);
+      const user = await supabase.auth.user();
+      if (!user) throw new Error('No user found');
+
+      // 1. Find all group_ids where the doctor is a member with role 'doctor'
+      const { data: doctorGroups, error: doctorGroupsError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id)
+        .eq('role', 'doctor');
+      if (doctorGroupsError) throw doctorGroupsError;
+      const groupIds = (doctorGroups || []).map((g: any) => g.group_id);
+
+      if (!groupIds.length) {
+        setPatients([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fetch group members who are patients in these groups
+      const { data: members, error: memberError } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .in('group_id', groupIds)
+        .eq('role', 'patient');
+      if (memberError) throw memberError;
+      const patientIds = (members || []).map((m: any) => m.user_id);
+
+      if (!patientIds.length) {
+        setPatients([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Fetch patient user details, including streak_category
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, email, streak_category, current_streak, longest_streak')
+        .in('id', patientIds);
+      if (userError) throw userError;
+
+      setPatients(users?.map((user: any) => ({
+        id: user.id,
+        name: user.full_name,
+        image: '',
+        status: user.streak_category === 'needs_help' ? 'Needs Attention' : 'Good',
+        streak: user.current_streak,
+        lastActivity: `${user.current_streak} days`,
+        tasksStatus: user.streak_category === 'needs_help' ? '2 missed' : 'All complete',
+        email: user.email,
+        type: user.streak_category === 'needs_help' ? 'needs_help' : user.streak_category === 'active' ? 'active' : 'pending',
+      })) || []);
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      setPatients([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredPatients = patients.filter(patient => {

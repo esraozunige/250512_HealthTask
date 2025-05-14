@@ -12,6 +12,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import DoctorBottomNav from '../components/DoctorBottomNav';
+import { supabase } from '../../lib/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type DoctorTaskManagementRouteProp = RouteProp<RootStackParamList, 'DoctorTaskManagement'>;
@@ -25,59 +26,61 @@ interface Task {
   iconBgColor: string;
 }
 
-const initialTaskTemplates: Task[] = [
-  {
-    id: '1',
-    icon: 'medical',
-    title: 'Daily Medication',
-    description: 'Take prescribed medication',
-    patientCount: 0,
-    iconBgColor: '#E6EBFF',
-  },
-  {
-    id: '2',
-    icon: 'walk',
-    title: 'Daily Walk',
-    description: 'Walk at least 8,000 steps',
-    patientCount: 0,
-    iconBgColor: '#E8F5E9',
-  },
-  {
-    id: '3',
-    icon: 'time',
-    title: 'Blood Pressure Check',
-    description: 'Record daily blood pressure',
-    patientCount: 0,
-    iconBgColor: '#FFEBEE',
-  },
-  {
-    id: '4',
-    icon: 'lock-closed',
-    title: 'Meditation Session',
-    description: '10 minutes of guided meditation',
-    patientCount: 0,
-    iconBgColor: '#F3E5F5',
-  },
-];
-
 const DoctorTaskManagement = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<DoctorTaskManagementRouteProp>();
-  const [taskTemplates, setTaskTemplates] = useState<Task[]>(initialTaskTemplates);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const user = await supabase.auth.user();
+      if (!user) throw new Error('No user found');
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, icon, title, description, assigned_by')
+        .eq('assigned_by', user.id);
+      if (error) throw error;
+      // Group by title/icon/description, count patients
+      const grouped: { [key: string]: Task } = {};
+      (data || []).forEach(task => {
+        const key = `${task.title}|${task.icon}|${task.description}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            id: task.id,
+            icon: task.icon,
+            title: task.title,
+            description: task.description,
+            patientCount: 1,
+            iconBgColor: '#E6EBFF',
+          };
+        } else {
+          grouped[key].patientCount += 1;
+        }
+      });
+      setTasks(Object.values(grouped));
+    } catch (err) {
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    // eslint-disable-next-line
+  }, []);
 
   useEffect(() => {
     if (route.params?.updatedTask) {
-      const updatedTask = route.params.updatedTask as Task;
-      setTaskTemplates(prevTemplates =>
-        prevTemplates.map(template =>
-          template.id === updatedTask.id ? { ...template, patientCount: updatedTask.patientCount } : template
-        )
-      );
+      fetchTasks();
     }
+    // eslint-disable-next-line
   }, [route.params?.updatedTask]);
 
   const stats = {
-    activeTasks: taskTemplates.filter(task => task.patientCount > 0).length,
+    activeTasks: tasks.length,
     completionRate: '78%',
   };
 
@@ -125,24 +128,30 @@ const DoctorTaskManagement = () => {
 
         <Text style={styles.sectionTitle}>Task Templates</Text>
 
-        {taskTemplates.map(template => (
-          <View key={template.id} style={styles.templateCard}>
-            <View style={[styles.templateIcon, { backgroundColor: template.iconBgColor }]}>
-              <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
+        {loading ? (
+          <Text>Loading...</Text>
+        ) : tasks.length === 0 ? (
+          <Text>No tasks found.</Text>
+        ) : (
+          tasks.map(template => (
+            <View key={template.id} style={styles.templateCard}>
+              <View style={[styles.templateIcon, { backgroundColor: template.iconBgColor || '#E6EBFF' }]}>
+                <Ionicons name={template.icon as any} size={24} color="#4A6FFF" />
+              </View>
+              <View style={styles.templateInfo}>
+                <Text style={styles.templateTitle}>{template.title}</Text>
+                <Text style={styles.templateDescription}>{template.description}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.patientCountButton}
+                onPress={() => handleAssignTask(template)}
+              >
+                <Text style={styles.patientCount}>{template.patientCount}</Text>
+                <Text style={styles.patientCountLabel}>patients</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.templateInfo}>
-              <Text style={styles.templateTitle}>{template.title}</Text>
-              <Text style={styles.templateDescription}>{template.description}</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.patientCountButton}
-              onPress={() => handleAssignTask(template)}
-            >
-              <Text style={styles.patientCount}>{template.patientCount}</Text>
-              <Text style={styles.patientCountLabel}>patients</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
 
       <DoctorBottomNav activeTab="Tasks" />

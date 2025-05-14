@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import DoctorBottomNav from '../components/DoctorBottomNav';
+import { supabase } from '../../lib/supabase';
 
 // Mock data for demonstration
 const mockGroups = [
@@ -62,6 +63,20 @@ const mockGroups = [
     ],
     unread: 0,
   },
+  {
+    id: '4',
+    name: 'Mehmet',
+    members: 2,
+    status: 'Active',
+    lastActivity: 'Today',
+    tasks: 1,
+    avatars: [
+      'https://randomuser.me/api/portraits/men/50.jpg',
+      'https://randomuser.me/api/portraits/men/51.jpg',
+    ],
+    unread: 1,
+    doctorEmail: 'figurly3d@gmail.com',
+  },
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DoctorGroupList'>;
@@ -70,6 +85,89 @@ const DoctorGroupList = () => {
   const navigation = useNavigation<NavigationProp>();
   const [search, setSearch] = useState('');
   const [groups, setGroups] = useState(mockGroups);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      setLoading(true);
+      try {
+        // 1. Get current doctor user
+        const user = await supabase.auth.user();
+        if (!user) throw new Error('No user found');
+        // 2. Get all group_ids where doctor is a member
+        const { data: groupMembers, error: groupMembersError } = await supabase
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', user.id)
+          .eq('role', 'doctor');
+        if (groupMembersError) throw groupMembersError;
+        const groupIds = (groupMembers || []).map(g => g.group_id);
+        if (!groupIds.length) {
+          setGroups(mockGroups);
+          setLoading(false);
+          return;
+        }
+        // 3. For each group_id, fetch group details
+        const { data: groupData, error: groupError } = await supabase
+          .from('groups')
+          .select('id')
+          .in('id', groupIds);
+        if (groupError) throw groupError;
+        // 4. For each group, fetch members and tasks count, and patient name(s)
+        const realGroups = await Promise.all(
+          (groupData || []).map(async (group) => {
+            // Members count
+            const { count: membersCount } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('group_id', group.id);
+            // Tasks count
+            const { count: tasksCount } = await supabase
+              .from('tasks')
+              .select('*', { count: 'exact', head: true })
+              .eq('assigned_by', user.id)
+              .eq('status', 'pending');
+            // Patient(s) in this group
+            const { data: patientMembers } = await supabase
+              .from('group_members')
+              .select('user_id')
+              .eq('group_id', group.id)
+              .eq('role', 'patient');
+            let patientNames = '';
+            if (patientMembers && patientMembers.length > 0) {
+              const patientIds = patientMembers.map(pm => pm.user_id);
+              const { data: patientUsers } = await supabase
+                .from('users')
+                .select('full_name')
+                .in('id', patientIds);
+              patientNames = (patientUsers || []).map(u => u.full_name).join(', ');
+            }
+            return {
+              id: group.id,
+              name: patientNames || 'Patient Group',
+              members: membersCount || 0,
+              status: 'Active',
+              lastActivity: 'Today',
+              tasks: tasksCount || 0,
+              avatars: [],
+              unread: 0,
+            };
+          })
+        );
+        // 5. Merge real groups with mock groups (avoid duplicates by id)
+        const allGroups = [
+          ...realGroups.filter(rg => !mockGroups.some(mg => mg.id === rg.id)),
+          ...mockGroups,
+        ];
+        setGroups(allGroups);
+      } catch (e) {
+        setGroups(mockGroups);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGroups();
+  }, []);
 
   // Filter groups by search
   const filteredGroups = groups.filter(group =>

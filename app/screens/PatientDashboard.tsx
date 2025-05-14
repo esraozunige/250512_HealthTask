@@ -31,6 +31,7 @@ type TaskSubmitProofParams = {
 const PatientDashboard = () => {
   const navigation = useNavigation<NavigationProp>();
   const { tasks, toggleTaskStatus } = useTaskContext();
+  const filteredTasks = tasks.filter(task => task.status === 'pending' || task.status === 'completed');
 
   const renderTask = (task: Task) => {
     const isCompleted = task.status === 'completed';
@@ -115,9 +116,9 @@ const PatientDashboard = () => {
 
       <ScrollView style={styles.content}>
         <Text style={styles.sectionTitle}>Your Health Tasks</Text>
-        {tasks.map(renderTask)}
+        {filteredTasks.map(renderTask)}
       </ScrollView>
-      <PatientBottomNav activeTab="Home" />
+      <PatientBottomNav activeTab="Dashboard" />
     </SafeAreaView>
   );
 };

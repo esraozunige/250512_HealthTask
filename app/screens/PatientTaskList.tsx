@@ -54,6 +54,7 @@ const PatientTaskList = () => {
           )
         `)
         .eq('assigned_to', user.id)
+        .in('status', ['pending', 'completed'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;

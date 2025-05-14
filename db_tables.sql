@@ -227,3 +227,12 @@ CREATE POLICY "Access group feed if member"
 CREATE POLICY "Insert own group feed posts"
   ON group_feed FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+  ALTER TABLE tasks
+ADD COLUMN icon text;
+
+ALTER TABLE tasks
+ADD COLUMN status text DEFAULT 'pending';
+
+ALTER TABLE users
+ADD COLUMN streak_category text DEFAULT 'active';

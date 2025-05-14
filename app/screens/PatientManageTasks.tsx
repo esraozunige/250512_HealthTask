@@ -20,11 +20,13 @@ const PatientManageTasks = () => {
   const { tasks, updateTask } = useTaskContext();
   const [activeFilter, setActiveFilter] = useState<'all' | 'self' | 'doctor'>('all');
 
-  const filteredTasks = tasks.filter(task => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'self') return task.assignedBy === 'Self-assigned';
-    return task.assignedBy !== 'Self-assigned';
-  });
+  const filteredTasks = tasks
+    .filter(task => (task.status === 'pending' || task.status === 'completed'))
+    .filter(task => {
+      if (activeFilter === 'all') return true;
+      if (activeFilter === 'self') return task.assignedBy === 'Self-assigned';
+      return task.assignedBy !== 'Self-assigned';
+    });
 
   const handleCreateTask = () => {
     navigation.navigate('PatientCreateTask', {});

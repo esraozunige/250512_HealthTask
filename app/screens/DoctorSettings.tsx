@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 import { useDoctor } from '../context/DoctorContext';
+import { supabase } from '../../lib/supabase';
 
 const DoctorSettings = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -140,6 +141,17 @@ const DoctorSettings = () => {
         {/* Add privacy rows here if needed */}
         <View style={{ height: 32 }} />
       </ScrollView>
+      {/* Logout Button */}
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={async () => {
+          await supabase.auth.signOut();
+          navigation.reset({ index: 0, routes: [{ name: 'DoctorLogin' }] });
+        }}
+      >
+        <Ionicons name="log-out-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
+        <Text style={styles.logoutButtonText}>Logout</Text>
+      </TouchableOpacity>
       <DoctorBottomNav activeTab="Profile" />
     </SafeAreaView>
   );
@@ -239,6 +251,21 @@ const styles = StyleSheet.create({
   },
   rowIcon: { marginRight: 16 },
   rowText: { fontSize: 16, color: '#222', fontWeight: '500' },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E86D6D',
+    padding: 16,
+    borderRadius: 8,
+    margin: 20,
+    marginBottom: 32,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default DoctorSettings; 
