@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import PatientBottomNav from '../components/PatientBottomNav';
+import { supabase } from '../../lib/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PatientTaskHistory'>;
 
@@ -33,53 +34,50 @@ interface TaskHistoryItem {
   feeling: string;
 }
 
-const mockTaskHistory: TaskHistoryItem[] = [
-  {
-    id: '1',
-    icon: '🚶‍♂️',
-    title: 'Daily Walk',
-    description: 'Walk at least 8,000 steps',
-    status: 'completed',
-    timestamp: 'Today, 3:45 PM',
-    details: {
-      stepsCompleted: 9234,
-    },
-    comments: 2,
-    proofImage: 'https://placehold.co/300x200',
-    feeling: 'Felt energized and refreshed!'
-  },
-  {
-    id: '2',
-    icon: '🥗',
-    title: 'Healthy Meal',
-    description: 'Post a photo of your healthy dinner',
-    status: 'completed',
-    timestamp: 'Yesterday, 7:30 PM',
-    details: {
-      photoSubmitted: true,
-    },
-    comments: 1,
-    proofImage: 'https://placehold.co/300x200',
-    feeling: 'Proud of my healthy choice!'
-  },
-  {
-    id: '3',
-    icon: '❤️',
-    title: 'Medication',
-    description: 'Take evening medication',
-    status: 'completed',
-    timestamp: '2 days ago, 8:00 PM',
-    details: {
-      medicationTaken: true,
-    },
-    comments: 3,
-    proofImage: 'https://placehold.co/300x200',
-    feeling: 'Glad I remembered!'
-  },
-];
-
 const PatientTaskHistory = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const user = await supabase.auth.user();
+      if (!user) throw new Error('No user found');
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          template:task_templates (*),
+          last_submission:task_submissions (
+            status,
+            created_at
+          )
+        `)
+        .eq('assigned_to', user.id)
+        .in('status', ['completed', 'failed'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setTasks((data || []).map(task => ({
+        id: task.id,
+        icon: task.template?.icon || '',
+        title: task.template?.title || '',
+        description: task.template?.description || '',
+        status: task.status,
+        timestamp: task.created_at,
+        comments: 0, // You can fetch comments count if needed
+        proofImage: '', // Set if you have proof image
+        feeling: '', // Set if you have feeling info
+      })));
+    } catch (error) {
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const renderTaskHistoryItem = (task: TaskHistoryItem) => {
     const isCompleted = task.status === 'completed';
@@ -165,7 +163,7 @@ const PatientTaskHistory = () => {
               <Text style={styles.filterText}>Filter</Text>
             </TouchableOpacity>
           </View>
-          {mockTaskHistory.map(renderTaskHistoryItem)}
+          {tasks.map(renderTaskHistoryItem)}
         </View>
       </ScrollView>
 

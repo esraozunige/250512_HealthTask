@@ -62,21 +62,7 @@ const mockGroups = [
       'https://randomuser.me/api/portraits/women/69.jpg',
     ],
     unread: 0,
-  },
-  {
-    id: '4',
-    name: 'Mehmet',
-    members: 2,
-    status: 'Active',
-    lastActivity: 'Today',
-    tasks: 1,
-    avatars: [
-      'https://randomuser.me/api/portraits/men/50.jpg',
-      'https://randomuser.me/api/portraits/men/51.jpg',
-    ],
-    unread: 1,
-    doctorEmail: 'figurly3d@gmail.com',
-  },
+  }
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DoctorGroupList'>;

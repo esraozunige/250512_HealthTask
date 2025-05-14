@@ -43,11 +43,11 @@ const PatientTaskList = () => {
     try {
       const user = await supabase.auth.user();
       if (!user) throw new Error('No user found');
-
       const { data, error } = await supabase
         .from('tasks')
         .select(`
           *,
+          template:task_templates (*),
           last_submission:task_submissions (
             status,
             created_at
@@ -56,10 +56,17 @@ const PatientTaskList = () => {
         .eq('assigned_to', user.id)
         .in('status', ['pending', 'completed'])
         .order('created_at', { ascending: false });
-
       if (error) throw error;
-
-      setTasks(data || []);
+      // Map to use template fields for display
+      setTasks((data || []).map(task => ({
+        id: task.id,
+        title: task.template?.title || '',
+        description: task.template?.description || '',
+        frequency: task.template?.frequency || '',
+        due_hour: task.template?.due_hour || '',
+        proof_type: task.template?.proof_type || '',
+        last_submission: task.last_submission,
+      })));
     } catch (error) {
       console.error('Error fetching tasks:', error);
       Alert.alert('Error', 'Failed to fetch tasks');

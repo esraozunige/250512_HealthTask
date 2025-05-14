@@ -54,111 +54,50 @@ const DoctorCreateTask = () => {
   const [minute, setMinute] = useState('00');
   const [ampm, setAmPm] = useState<'AM' | 'PM'>('AM');
   const [selectedProof, setSelectedProof] = useState<string[]>([]);
-  const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(false);
 
-  React.useEffect(() => {
-    fetchPatients();
-  }, []);
-
-  const fetchPatients = async () => {
-    try {
-      const user = await supabase.auth.user();
-      if (!user) throw new Error('No user found');
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .eq('role', 'patient');
-      if (error) throw error;
-      setPatients(data || []);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to fetch patients');
-    }
-  };
-
-  const handlePatientSelect = (patientId: string) => {
-    setSelectedPatients(prev =>
-      prev.includes(patientId)
-        ? prev.filter(id => id !== patientId)
-        : [...prev, patientId]
-    );
-  };
-
   const handleCreateTask = async () => {
-    console.log('DEBUG: Create button pressed');
-    Alert.alert('Debug', 'Create button pressed');
     if (!title.trim()) {
-      console.log('DEBUG: Title missing');
       Alert.alert('Error', 'Please enter a task name');
       return;
     }
     if (!frequency.trim()) {
-      console.log('DEBUG: Frequency missing');
       Alert.alert('Error', 'Please select a frequency');
       return;
     }
     if (!hour || !minute) {
-      console.log('DEBUG: Due hour missing');
       Alert.alert('Error', 'Please enter a due hour');
       return;
     }
     setLoading(true);
     try {
       const user = await supabase.auth.user();
-      console.log('DEBUG: Current user:', user);
       if (!user) {
         Alert.alert('Error', 'You are not authenticated. Please log in again.');
         setLoading(false);
         return;
       }
       const now = new Date().toISOString();
-      let inserts = [];
-      if (selectedPatients.length > 0) {
-        inserts = selectedPatients.map(patientId => ({
+      const { data, error } = await supabase.from('task_templates').insert([
+        {
+          doctor_id: user.id,
           title: title.trim(),
           description: description.trim(),
           icon: selectedIcon,
           frequency: frequency.trim(),
           due_hour: `${hour}:${minute} ${ampm}`,
           proof_type: selectedProof.join(','),
-          assigned_to: patientId,
-          assigned_by: user.id,
-          status: 'pending',
           created_at: now,
-        }));
-      } else {
-        inserts = [{
-          title: title.trim(),
-          description: description.trim(),
-          icon: selectedIcon,
-          frequency: frequency.trim(),
-          due_hour: `${hour}:${minute} ${ampm}`,
-          proof_type: selectedProof.join(','),
-          assigned_by: user.id,
-          status: 'pending',
-          created_at: now,
-        }];
-      }
-      console.log('DEBUG: Inserting tasks:', inserts);
-      Alert.alert('Debug', 'Inserting tasks: ' + JSON.stringify(inserts));
-      const { data, error } = await supabase.from('tasks').insert(inserts).select();
-      console.log('DEBUG: Insert result:', { data, error });
+        }
+      ]).select();
       if (error) {
-        console.error('Supabase insert error:', error);
-        Alert.alert('Error', 'Failed to create task(s): ' + error.message);
+        Alert.alert('Error', 'Failed to create task template: ' + error.message);
         setLoading(false);
         return;
       }
-      Alert.alert('Debug', 'Inserted tasks: ' + JSON.stringify(data));
-      console.log('Inserted tasks:', data);
-      console.log('DEBUG: Navigating to DoctorTaskManagement');
-      Alert.alert('Debug', 'Navigating to DoctorTaskManagement');
-      navigation.navigate('DoctorTaskManagement', {
-        updatedTask: Array.isArray(data) && data.length === 1 ? data[0] : data
-      });
+      const template = Array.isArray(data) ? data[0] : data;
+      navigation.navigate('DoctorTaskManagement', { updatedTask: template });
     } catch (err) {
-      console.error('Unexpected error:', err);
       Alert.alert('Error', 'Unexpected error: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
@@ -190,28 +129,6 @@ const DoctorCreateTask = () => {
       </View>
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={styles.form}>
-          <Text style={styles.label}>Patient</Text>
-          <View style={styles.patientSelector}>
-            {patients.map(patient => (
-              <TouchableOpacity
-                key={patient.id}
-                style={[
-                  styles.patientOption,
-                  selectedPatients.includes(patient.id) && styles.selectedPatient,
-                ]}
-                onPress={() => handlePatientSelect(patient.id)}
-              >
-                <Text
-                  style={[
-                    styles.patientName,
-                    selectedPatients.includes(patient.id) && styles.selectedPatientText,
-                  ]}
-                >
-                  {patient.full_name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
           <Text style={styles.label}>Task Name</Text>
           <TextInput
             style={styles.input}
@@ -348,31 +265,6 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-  },
-  patientSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
-  },
-  patientOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  selectedPatient: {
-    backgroundColor: '#E86D6D',
-    borderColor: '#E86D6D',
-  },
-  patientName: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedPatientText: {
-    color: '#fff',
   },
   iconGrid: {
     flexDirection: 'row',

@@ -30,6 +30,9 @@ interface Task {
   description: string;
   patientCount: number;
   iconBgColor: string;
+  frequency: FrequencyType;
+  due_hour: string;
+  proof_type: ProofType[];
 }
 
 interface Patient {
@@ -68,6 +71,7 @@ const DoctorAssignTask = () => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [patientCount, setPatientCount] = useState(0);
   
   useEffect(() => {
     fetchPatients();
@@ -77,7 +81,6 @@ const DoctorAssignTask = () => {
     try {
       const user = await supabase.auth.user();
       if (!user) throw new Error('No user found');
-
       // Find all group_ids where the doctor is a member with role 'doctor'
       const { data: doctorGroups, error: doctorGroupsError } = await supabase
         .from('group_members')
@@ -88,10 +91,10 @@ const DoctorAssignTask = () => {
       const groupIds = (doctorGroups || []).map(g => g.group_id);
       if (!groupIds.length) {
         setPatients([]);
+        setPatientCount(0);
         setIsLoading(false);
         return;
       }
-
       // Fetch group members who are patients in these groups
       const { data: members, error: memberError } = await supabase
         .from('group_members')
@@ -102,24 +105,41 @@ const DoctorAssignTask = () => {
       const patientIds = (members || []).map(m => m.user_id);
       if (!patientIds.length) {
         setPatients([]);
+        setPatientCount(0);
         setIsLoading(false);
         return;
       }
-
       // Fetch patient user details
       const { data: users, error: userError } = await supabase
         .from('users')
         .select('id, full_name, email')
         .in('id', patientIds);
       if (userError) throw userError;
-      setPatients(users?.map(patient => ({
-        id: patient.id,
-        name: patient.full_name,
-        full_name: patient.full_name,
-        image: '',
-        age: 0,
-        status: 'unassigned'
-      })) || []);
+      // Fetch existing assignments for this template
+      const { data: assignments, error: assignError } = await supabase
+        .from('tasks')
+        .select('assigned_to, status')
+        .eq('template_id', task.id)
+        .eq('assigned_by', user.id);
+      if (assignError) throw assignError;
+      setPatients(users?.map(patient => {
+        // Find all assignments for this patient
+        const patientAssignments = (assignments || []).filter(a => a.assigned_to === patient.id);
+        let status: 'assigned' | 'unassigned' | 'suspended' = 'unassigned';
+        if (patientAssignments.some(a => a.status !== 'suspended')) {
+          status = 'assigned';
+        } else if (patientAssignments.some(a => a.status === 'suspended')) {
+          status = 'suspended';
+        }
+        return {
+          id: patient.id,
+          name: patient.full_name,
+          full_name: patient.full_name,
+          image: '',
+          age: 0,
+          status,
+        };
+      }) || []);
     } catch (error) {
       console.error('Error fetching patients:', error);
       Alert.alert('Error', 'Failed to fetch patients');
@@ -150,30 +170,54 @@ const DoctorAssignTask = () => {
   };
 
   const handlePatientAction = async (patient: Patient) => {
-    const updatedPatients = patients.map(p => {
-      if (p.id === patient.id) {
-        const newStatus: 'assigned' | 'unassigned' | 'suspended' = p.status === 'assigned' ? 'suspended' : 'assigned';
-        return { ...p, status: newStatus };
-      }
-      return p;
-    });
-    setPatients(updatedPatients);
-
-    // Update task status in DB if suspending
+    const user = await supabase.auth.user();
+    if (!user) return;
+    let newStatus: 'assigned' | 'unassigned' | 'suspended';
     if (patient.status === 'assigned') {
-      const user = await supabase.auth.user();
-      if (!user) return;
+      // Suspend the assignment
       await supabase
         .from('tasks')
         .update({ status: 'suspended' })
+        .eq('template_id', task.id)
         .eq('assigned_to', patient.id)
         .eq('assigned_by', user.id)
-        .eq('status', 'pending');
+        .neq('status', 'suspended');
+      newStatus = 'suspended';
+    } else {
+      // Assign (insert or update to pending)
+      const { data: existing, error } = await supabase
+        .from('tasks')
+        .select('id, status')
+        .eq('template_id', task.id)
+        .eq('assigned_to', patient.id)
+        .eq('assigned_by', user.id)
+        .maybeSingle();
+      if (existing && existing.status === 'suspended') {
+        await supabase
+          .from('tasks')
+          .update({ status: 'pending' })
+          .eq('id', existing.id);
+      } else if (!existing) {
+        await supabase.from('tasks').insert({
+          template_id: task.id,
+          assigned_by: user.id,
+          assigned_to: patient.id,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          title: task.title,
+          description: task.description,
+          frequency: task.frequency,
+          due_hour: task.due_hour,
+          proof_type: task.proof_type,
+          icon: task.icon,
+        });
+      }
+      newStatus = 'assigned';
     }
-
+    await fetchPatients(); // Refresh patient list and count from DB
     setNotification({
       patientName: patient.name,
-      type: patient.status === 'assigned' ? 'suspended' : 'assigned',
+      type: newStatus === 'suspended' ? 'suspended' : 'assigned',
       visible: true,
     });
   };
@@ -195,72 +239,21 @@ const DoctorAssignTask = () => {
   };
 
   const handleAssignTask = async () => {
-    if (!title || !frequency || !hour || !selectedProof.length) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      const user = await supabase.auth.user();
-      if (!user) throw new Error('No user found');
-      const now = new Date().toISOString();
-
-      for (const patient of patients) {
-        // Check for existing task for this doctor/patient/title/frequency
-        const { data: existingTasks, error: fetchError } = await supabase
-          .from('tasks')
-          .select('*')
-          .eq('assigned_by', user.id)
-          .eq('assigned_to', patient.id)
-          .eq('title', title)
-          .eq('frequency', frequency)
-          .order('created_at', { ascending: false });
-        if (fetchError) throw fetchError;
-        const pendingTask = existingTasks?.find(t => t.status === 'pending');
-        const suspendedTask = existingTasks?.find(t => t.status === 'suspended');
-
-        if (patient.status === 'assigned') {
-          if (suspendedTask) {
-            // Reactivate suspended task
-            await supabase
-              .from('tasks')
-              .update({ status: 'pending' })
-              .eq('id', suspendedTask.id);
-          } else if (!pendingTask) {
-            // Create new task if not already pending
-            await supabase
-        .from('tasks')
-        .insert({
-          title,
-          description,
-          frequency,
-          due_hour: `${hour}:${minute} ${ampm}`,
-          proof_type: selectedProof.join(','),
-          assigned_by: user.id,
-                assigned_to: patient.id,
-                status: 'pending',
-                created_at: now,
-        });
+      await fetchPatients(); // Refresh patient list and count from DB
+      Alert.alert('Success', 'Assignments updated successfully!', [
+        { text: 'OK', onPress: () => navigation.navigate('DoctorTaskManagement', {
+          updatedTask: {
+            id: task.id,
+            icon: task.icon,
+            title: task.title,
+            description: task.description,
+            patientCount: patientCount,
+            iconBgColor: '#E6EBFF',
           }
-        } else if (patient.status === 'suspended') {
-          if (pendingTask) {
-            // Suspend the pending task
-            await supabase
-              .from('tasks')
-              .update({ status: 'suspended' })
-              .eq('id', pendingTask.id);
-          }
-        }
-      }
-
-      await fetchPatients(); // Refresh patient list
-      Alert.alert(
-        'Success',
-        'Assignments updated successfully!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+        }) }
+      ]);
     } catch (error) {
       console.error('Error updating assignments:', error);
       Alert.alert('Error', 'Failed to update assignments');
@@ -293,7 +286,7 @@ const DoctorAssignTask = () => {
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Assign Task</Text>
-        <TouchableOpacity style={styles.createNewButton}>
+        <TouchableOpacity style={styles.createNewButton} onPress={() => navigation.navigate('DoctorCreateTask')}>
           <Text style={styles.createNewText}>Create New</Text>
         </TouchableOpacity>
       </View>
@@ -397,7 +390,7 @@ const DoctorAssignTask = () => {
         <View style={styles.patientSection}>
           <View style={styles.patientTabs}>
             <TouchableOpacity style={[styles.patientTab, styles.activePatientTab]}>
-              <Text style={[styles.patientTabText, styles.activePatientTabText]}>Active (12)</Text>
+              <Text style={[styles.patientTabText, styles.activePatientTabText]}>Active ({patientCount})</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.patientTab}>
               <Text style={styles.patientTabText}>Invited (3)</Text>

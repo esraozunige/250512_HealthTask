@@ -37,29 +37,55 @@ const DoctorTaskManagement = () => {
     try {
       const user = await supabase.auth.user();
       if (!user) throw new Error('No user found');
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, icon, title, description, assigned_by')
-        .eq('assigned_by', user.id);
-      if (error) throw error;
-      // Group by title/icon/description, count patients
-      const grouped: { [key: string]: Task } = {};
-      (data || []).forEach(task => {
-        const key = `${task.title}|${task.icon}|${task.description}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            id: task.id,
-            icon: task.icon,
-            title: task.title,
-            description: task.description,
-            patientCount: 1,
+      // Fetch all task templates created by this doctor
+      const { data: templates, error: templateError } = await supabase
+        .from('task_templates')
+        .select('*')
+        .eq('doctor_id', user.id);
+      if (templateError) throw templateError;
+      // Fetch all group_ids where the doctor is a member
+      const { data: doctorGroups, error: doctorGroupsError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id)
+        .eq('role', 'doctor');
+      if (doctorGroupsError) throw doctorGroupsError;
+      const groupIds = (doctorGroups || []).map(g => g.group_id);
+      // Fetch all patient ids in these groups
+      const { data: members, error: memberError } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .in('group_id', groupIds)
+        .eq('role', 'patient');
+      if (memberError) throw memberError;
+      const patientIds = (members || []).map(m => m.user_id);
+      // For each template, count the number of assignments in tasks
+      const tasksWithCounts = await Promise.all((templates || [])
+        .filter(template => template.title && template.title.trim() !== '')
+        .map(async (template) => {
+          // Fetch all assignments for this template and doctor with status not 'suspended'
+          const { data: assignments, error: countError } = await supabase
+            .from('tasks')
+            .select('assigned_to, status')
+            .eq('template_id', template.id)
+            .eq('assigned_by', user.id)
+            .neq('status', 'suspended');
+          // Count unique patients (assigned_to) who are in patientIds
+          const uniquePatientIds = new Set(
+            (assignments || [])
+              .filter(a => patientIds.includes(a.assigned_to))
+              .map(a => a.assigned_to)
+          );
+          return {
+            id: template.id,
+            icon: template.icon,
+            title: template.title,
+            description: template.description,
+            patientCount: uniquePatientIds.size,
             iconBgColor: '#E6EBFF',
           };
-        } else {
-          grouped[key].patientCount += 1;
-        }
-      });
-      setTasks(Object.values(grouped));
+        }));
+      setTasks(tasksWithCounts);
     } catch (err) {
       setTasks([]);
     } finally {

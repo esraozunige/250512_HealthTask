@@ -236,3 +236,18 @@ ADD COLUMN status text DEFAULT 'pending';
 
 ALTER TABLE users
 ADD COLUMN streak_category text DEFAULT 'active';
+
+create table task_templates (
+  id uuid primary key default uuid_generate_v4(),
+  doctor_id uuid references users(id),
+  group_id uuid references groups(id),
+  title text not null,
+  description text,
+  icon text,
+  frequency text,
+  due_hour time,
+  proof_type text,
+  created_at timestamp with time zone default now()
+);
+
+alter table tasks add column template_id uuid references task_templates(id);

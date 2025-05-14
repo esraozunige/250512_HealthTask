@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,55 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { useTaskContext, Task } from '../context/TaskContext';
+import { supabase } from '../../lib/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PatientManageTasks'>;
 
 const PatientManageTasks = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { tasks, updateTask } = useTaskContext();
+  const [tasks, setTasks] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'self' | 'doctor'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const user = await supabase.auth.user();
+      if (!user) throw new Error('No user found');
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          template:task_templates (*),
+          last_submission:task_submissions (
+            status,
+            created_at
+          )
+        `)
+        .eq('assigned_to', user.id)
+        .in('status', ['pending', 'completed'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setTasks((data || []).map(task => ({
+        id: task.id,
+        icon: task.template?.icon || '',
+        title: task.template?.title || '',
+        description: task.template?.description || '',
+        frequency: task.template?.frequency || '',
+        assignedBy: task.assigned_by,
+        dueIn: '', // You can calculate dueIn if you have due date info
+        risk: 0, // Set risk if you have it
+        status: task.status,
+      })));
+    } catch (error) {
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredTasks = tasks
     .filter(task => (task.status === 'pending' || task.status === 'completed'))
@@ -32,11 +73,11 @@ const PatientManageTasks = () => {
     navigation.navigate('PatientCreateTask', {});
   };
 
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = (task: any) => {
     navigation.navigate('PatientCreateTask', { task });
   };
 
-  const renderTask = (task: Task) => (
+  const renderTask = (task: any) => (
     <View key={task.id} style={styles.taskCard}>
       <View style={styles.taskHeader}>
         <Text style={styles.taskIcon}>{task.icon}</Text>
